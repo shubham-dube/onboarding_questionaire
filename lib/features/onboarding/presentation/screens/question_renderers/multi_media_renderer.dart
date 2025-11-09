@@ -20,15 +20,18 @@ class MultiMediaRenderer extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<OnboardingBloc, OnboardingState>(
       builder: (context, state) {
-        final keyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
+        // Check keyboard visibility using MediaQuery
+        final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+        final isKeyboardVisible = keyboardHeight > 0;
+
         final hasMediaUI =
             state.isRecordingAudio ||
-            state.hasAudioRecording ||
-            state.hasVideoRecording;
+                state.hasAudioRecording ||
+                state.hasVideoRecording;
 
         // Calculate minLines based on keyboard and media state
         int minLines;
-        if (keyboardOpen) {
+        if (isKeyboardVisible) {
           minLines = 3;
         } else if (hasMediaUI) {
           minLines = 5;
@@ -61,43 +64,59 @@ class MultiMediaRenderer extends StatelessWidget {
                                 children: [
                                   AppSpacing.verticalSpaceLG,
 
-                                  // Question section
-                                  Text(
-                                    state.currentQuestion.questionNumber,
+                                  // Question section with animations
+                                  AnimatedDefaultTextStyle(
+                                    duration: const Duration(milliseconds: 300),
                                     style: AppTextStyles.s1Regular.copyWith(
                                       color: AppColors.text5,
+                                      fontSize: isKeyboardVisible ? 12 : 14,
+                                    ),
+                                    child: Text(
+                                      state.currentQuestion.questionNumber,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
-                                  Text(
-                                    state.currentQuestion.question,
-                                    style: AppTextStyles.h2Bold,
-                                  ),
-                                  if (state.currentQuestion.description !=
-                                      null) ...[
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      state.currentQuestion.description!,
-                                      style: AppTextStyles.b1Regular.copyWith(
-                                        color: AppColors.text3,
-                                      ),
+                                  AnimatedDefaultTextStyle(
+                                    duration: const Duration(milliseconds: 300),
+                                    style: AppTextStyles.h2Bold.copyWith(
+                                      fontSize: isKeyboardVisible ? 20 : 28,
                                     ),
-                                  ],
+                                    child: Text(
+                                      state.currentQuestion.question,
+                                    ),
+                                  ),
+
+                                  // Hide description when keyboard is visible
+                                  if (state.currentQuestion.description != null)
+                                    AnimatedCrossFade(
+                                      duration: const Duration(milliseconds: 300),
+                                      crossFadeState: isKeyboardVisible
+                                          ? CrossFadeState.showSecond
+                                          : CrossFadeState.showFirst,
+                                      firstChild: Column(
+                                        children: [
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            state.currentQuestion.description!,
+                                            style: AppTextStyles.b1Regular.copyWith(
+                                              color: AppColors.text3,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      secondChild: const SizedBox.shrink(),
+                                    ),
+
                                   AppSpacing.verticalSpaceXL,
 
                                   // Text input
                                   if (state.currentQuestion.hasTextInput)
                                     ImprovedTextField(
                                       key: ValueKey('textfield_$minLines'),
-                                      // Force rebuild on minLines change
                                       hintText: 'Share your thoughts here...',
                                       characterLimit:
-                                          state
-                                              .currentQuestion
-                                              .textCharacterLimit ??
-                                          600,
-                                      value:
-                                          state.currentAnswer.textAnswer ?? '',
+                                      state.currentQuestion.textCharacterLimit ?? 600,
+                                      value: state.currentAnswer.textAnswer ?? '',
                                       onChanged: (text) {
                                         context.read<OnboardingBloc>().add(
                                           UpdateTextAnswer(text),
@@ -127,30 +146,20 @@ class MultiMediaRenderer extends StatelessWidget {
                                   ],
 
                                   // Media previews
-                                  if (state.hasAudioRecording &&
-                                      !state.isRecordingAudio) ...[
+                                  if (state.hasAudioRecording && !state.isRecordingAudio) ...[
                                     const SizedBox(height: 16),
                                     AudioPreviewWidget(
-                                      duration:
-                                          state.currentAnswer.audioDuration ??
-                                          Duration.zero,
-                                      currentPosition:
-                                          state.audioPlaybackPosition,
+                                      duration: state.currentAnswer.audioDuration ?? Duration.zero,
+                                      currentPosition: state.audioPlaybackPosition,
                                       playbackState: state.audioPlaybackState,
                                       onPlay: () {
-                                        context.read<OnboardingBloc>().add(
-                                          const PlayAudio(),
-                                        );
+                                        context.read<OnboardingBloc>().add(const PlayAudio());
                                       },
                                       onPause: () {
-                                        context.read<OnboardingBloc>().add(
-                                          const PauseAudio(),
-                                        );
+                                        context.read<OnboardingBloc>().add(const PauseAudio());
                                       },
                                       onSeek: (position) {
-                                        context.read<OnboardingBloc>().add(
-                                          SeekAudio(position),
-                                        );
+                                        context.read<OnboardingBloc>().add(SeekAudio(position));
                                       },
                                       onDelete: () {
                                         context.read<OnboardingBloc>().add(
@@ -160,14 +169,11 @@ class MultiMediaRenderer extends StatelessWidget {
                                     ),
                                   ],
 
-                                  if (state.hasVideoRecording &&
-                                      !state.isRecordingVideo) ...[
+                                  if (state.hasVideoRecording && !state.isRecordingVideo) ...[
                                     const SizedBox(height: 16),
                                     VideoPreviewWidget(
                                       videoPath: state.currentAnswer.videoPath!,
-                                      duration:
-                                          state.currentAnswer.videoDuration ??
-                                          Duration.zero,
+                                      duration: state.currentAnswer.videoDuration ?? Duration.zero,
                                       onDelete: () {
                                         context.read<OnboardingBloc>().add(
                                           const DeleteVideoRecording(),
@@ -191,7 +197,7 @@ class MultiMediaRenderer extends StatelessWidget {
         );
       },
     );
-  }
+}
 }
 
 class _BottomMediaControls extends StatelessWidget {
@@ -201,13 +207,13 @@ class _BottomMediaControls extends StatelessWidget {
       builder: (context, state) {
         final showAudioButton =
             state.currentQuestion.hasAudioInput &&
-            !state.hasAudioRecording &&
-            !state.isRecordingAudio;
+                !state.hasAudioRecording &&
+                !state.isRecordingAudio;
 
         final showVideoButton =
             state.currentQuestion.hasVideoInput &&
-            !state.hasVideoRecording &&
-            !state.isRecordingVideo;
+                !state.hasVideoRecording &&
+                !state.isRecordingVideo;
 
         final showMediaButtons = showAudioButton || showVideoButton;
 
@@ -219,9 +225,7 @@ class _BottomMediaControls extends StatelessWidget {
             top: 16,
           ),
           decoration: BoxDecoration(
-            color:
-                AppColors
-                    .surfaceBlack1, // Add background to prevent transparency
+            color: AppColors.surfaceBlack1,
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.1),
@@ -232,16 +236,24 @@ class _BottomMediaControls extends StatelessWidget {
           ),
           child: Row(
             children: [
-              if (showMediaButtons)
-                _MediaButtonsGroup(
-                  showAudioButton: showAudioButton,
-                  showVideoButton: showVideoButton,
-                  isRecordingAudio: state.isRecordingAudio,
-                  isRecordingVideo: state.isRecordingVideo,
-                ),
-              if (showMediaButtons) const SizedBox(width: 12),
+              AnimatedSize(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                child: showMediaButtons
+                    ? Row(
+                  children: [
+                    _MediaButtonsGroup(
+                      showAudioButton: showAudioButton,
+                      showVideoButton: showVideoButton,
+                      isRecordingAudio: state.isRecordingAudio,
+                      isRecordingVideo: state.isRecordingVideo,
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                )
+                    : const SizedBox.shrink(),
+              ),
               Expanded(
-                flex: showMediaButtons ? 2 : 1,
                 child: GradientNextButton(
                   onPressed: () {
                     context.read<OnboardingBloc>().add(const NextQuestion());
@@ -310,12 +322,12 @@ class _MediaButtonsGroup extends StatelessWidget {
               },
               isRecording: isRecordingAudio,
               borderRadius:
-                  showVideoButton
-                      ? const BorderRadius.only(
-                        topLeft: Radius.circular(8),
-                        bottomLeft: Radius.circular(8),
-                      )
-                      : BorderRadius.circular(8),
+              showVideoButton
+                  ? const BorderRadius.only(
+                topLeft: Radius.circular(8),
+                bottomLeft: Radius.circular(8),
+              )
+                  : BorderRadius.circular(8),
             ),
           if (showAudioButton && showVideoButton)
             Container(
@@ -329,12 +341,12 @@ class _MediaButtonsGroup extends StatelessWidget {
               onPressed: () => _handleVideoRecording(context),
               isRecording: isRecordingVideo,
               borderRadius:
-                  showAudioButton
-                      ? const BorderRadius.only(
-                        topRight: Radius.circular(8),
-                        bottomRight: Radius.circular(8),
-                      )
-                      : BorderRadius.circular(8),
+              showAudioButton
+                  ? const BorderRadius.only(
+                topRight: Radius.circular(8),
+                bottomRight: Radius.circular(8),
+              )
+                  : BorderRadius.circular(8),
             ),
         ],
       ),
@@ -368,18 +380,18 @@ class _MediaButton extends StatelessWidget {
             height: 56,
             decoration: BoxDecoration(
               gradient:
-                  isRecording
-                      ? const RadialGradient(
-                        center: Alignment(-0.9, -0.9),
-                        radius: 2.0,
-                        colors: [
-                          Color(0x66222222),
-                          Color(0x66E2E2E2),
-                          Color(0x66222222),
-                        ],
-                        stops: [0.0, 0.4987, 1.0],
-                      )
-                      : null,
+              isRecording
+                  ? const RadialGradient(
+                center: Alignment(-0.9, -0.9),
+                radius: 2.0,
+                colors: [
+                  Color(0x66222222),
+                  Color(0x66E2E2E2),
+                  Color(0x66222222),
+                ],
+                stops: [0.0, 0.4987, 1.0],
+              )
+                  : null,
               borderRadius: borderRadius,
             ),
             child: Icon(icon, color: AppColors.text1, size: 20),

@@ -8,13 +8,45 @@ import '../../widgets/experience_card.dart';
 import '../../widgets/improved_text_field.dart';
 import '../../widgets/gradient_next_button.dart';
 
-class ExperienceSelectionRenderer extends StatelessWidget {
+class ExperienceSelectionRenderer extends StatefulWidget {
   const ExperienceSelectionRenderer({super.key});
 
   @override
+  State<ExperienceSelectionRenderer> createState() =>
+      _ExperienceSelectionRendererState();
+}
+
+class _ExperienceSelectionRendererState
+    extends State<ExperienceSelectionRenderer> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _animateToFirstPosition() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Check keyboard visibility using MediaQuery
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    final isKeyboardVisible = keyboardHeight > 0;
+
     return BlocBuilder<OnboardingBloc, OnboardingState>(
       builder: (context, state) {
+        // Calculate minLines based on keyboard state
+        final minLines = isKeyboardVisible ? 3 : 4;
+
         return Column(
           children: [
             // Scrollable content area
@@ -39,60 +71,73 @@ class ExperienceSelectionRenderer extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  // Question number
-                                  Text(
-                                    state.currentQuestion.questionNumber,
+                                  // Question number with animation
+                                  AnimatedDefaultTextStyle(
+                                    duration: const Duration(milliseconds: 300),
                                     style: AppTextStyles.s1Regular.copyWith(
                                       color: AppColors.text5,
+                                      fontSize: isKeyboardVisible ? 12 : 14,
+                                    ),
+                                    child: Text(
+                                      state.currentQuestion.questionNumber,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
 
-                                  // Question text
-                                  Text(
-                                    state.currentQuestion.question,
-                                    style: AppTextStyles.h2Bold,
+                                  // Question text with animation
+                                  AnimatedDefaultTextStyle(
+                                    duration: const Duration(milliseconds: 300),
+                                    style: AppTextStyles.h2Bold.copyWith(
+                                      fontSize: isKeyboardVisible ? 20 : 28,
+                                    ),
+                                    child: Text(
+                                      state.currentQuestion.question,
+                                    ),
                                   ),
 
                                   AppSpacing.verticalSpaceLG,
 
-                                  // Experience horizontal scroll
-                                  if (state.isLoadingExperiences)
-                                    Center(
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(40),
+                                  // Experience horizontal scroll with fixed height
+                                  SizedBox(
+                                    height: 96,
+                                    child: AnimatedSwitcher(
+                                      duration: const Duration(milliseconds: 300),
+                                      child: state.isLoadingExperiences
+                                          ? Center(
+                                        key: const ValueKey('loading_experiences'),
                                         child: CircularProgressIndicator(
-                                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryAccent),
+                                          valueColor: AlwaysStoppedAnimation<Color>(
+                                            AppColors.primaryAccent,
+                                          ),
                                         ),
-                                      ),
-                                    )
-                                  else if (state.experiences.isEmpty)
-                                    Center(
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(40),
+                                      )
+                                          : state.experiences.isEmpty
+                                          ? Center(
+                                        key: const ValueKey('empty_experiences'),
                                         child: Text(
                                           'No experiences available',
                                           style: AppTextStyles.b1Regular.copyWith(
                                             color: AppColors.text3,
                                           ),
                                         ),
-                                      ),
-                                    )
-                                  else
-                                    SizedBox(
-                                      height: 96,
-                                      child: ListView.builder(
+                                      )
+                                          : ListView.builder(
+                                        key: ValueKey('experiences_${state.experiences.length}'),
+                                        controller: _scrollController,
                                         scrollDirection: Axis.horizontal,
                                         itemCount: state.experiences.length,
                                         itemBuilder: (context, index) {
                                           final experience = state.experiences[index];
-                                          final isSelected = state.currentAnswer.selectedExperienceIds
+                                          final isSelected = state.currentAnswer
+                                              .selectedExperienceIds
                                               ?.contains(experience.id) ??
                                               false;
 
                                           return Padding(
                                             padding: EdgeInsets.only(
-                                              right: index < state.experiences.length - 1 ? 12 : 0,
+                                              right: index < state.experiences.length - 1
+                                                  ? 12
+                                                  : 0,
                                             ),
                                             child: ExperienceCard(
                                               experience: experience,
@@ -100,27 +145,40 @@ class ExperienceSelectionRenderer extends StatelessWidget {
                                               index: index,
                                               onTap: () {
                                                 context.read<OnboardingBloc>().add(
-                                                  ToggleExperienceSelection(experience.id),
+                                                  ToggleExperienceSelection(
+                                                      experience.id),
                                                 );
+                                                // Animate to first position after selection
+                                                if (!isSelected) {
+                                                  Future.delayed(
+                                                    const Duration(milliseconds: 100),
+                                                        () => _animateToFirstPosition(),
+                                                  );
+                                                }
                                               },
                                             ),
                                           );
                                         },
                                       ),
                                     ),
+                                  ),
 
                                   AppSpacing.verticalSpaceLG,
 
                                   // Description text field
                                   ImprovedTextField(
+                                    key: ValueKey('experience_textfield_$minLines'),
                                     hintText: 'Describe your perfect hotspot',
-                                    characterLimit: state.currentQuestion.textCharacterLimit ?? 250,
+                                    characterLimit:
+                                    state.currentQuestion.textCharacterLimit ?? 250,
                                     value: state.currentAnswer.textAnswer ?? '',
                                     onChanged: (text) {
-                                      context.read<OnboardingBloc>().add(UpdateTextAnswer(text));
+                                      context
+                                          .read<OnboardingBloc>()
+                                          .add(UpdateTextAnswer(text));
                                     },
                                     showCharacterCount: true,
-                                    minLines: 4,
+                                    minLines: minLines,
                                   ),
                                 ],
                               ),

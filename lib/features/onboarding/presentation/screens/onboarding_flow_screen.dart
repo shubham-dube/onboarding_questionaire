@@ -34,7 +34,7 @@ class _OnboardingFlowView extends StatelessWidget {
       body: BlocListener<OnboardingBloc, OnboardingState>(
         listener: (context, state) {
           if (state.status == OnboardingStatus.success) {
-
+            // Handle success
           } else if (state.status == OnboardingStatus.error) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -71,18 +71,57 @@ class _OnboardingFlowView extends StatelessWidget {
                       totalSteps: state.questions.length,
                       onBack: state.isFirstQuestion
                           ? () => Navigator.of(context).pop()
-                          : () => context.read<OnboardingBloc>().add(const PreviousQuestion()),
-                      onClose: () => Navigator.of(context).popUntil((route) => route.isFirst),
+                          : () => context
+                          .read<OnboardingBloc>()
+                          .add(const PreviousQuestion()),
+                      onClose: () =>
+                          Navigator.of(context).popUntil((route) => route.isFirst),
                     );
                   },
                 ),
 
-                // Question content
+                // Question content with animated transitions
                 Expanded(
                   child: BlocBuilder<OnboardingBloc, OnboardingState>(
                     builder: (context, state) {
-                      return _QuestionRenderer(
-                        questionType: state.currentQuestion.type,
+                      return AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 400),
+                        switchInCurve: Curves.easeInOut,
+                        switchOutCurve: Curves.easeInOut,
+                        transitionBuilder: (Widget child, Animation<double> animation) {
+                          // Slide and fade transition
+                          final offsetAnimation = Tween<Offset>(
+                            begin: const Offset(1.0, 0.0),
+                            end: Offset.zero,
+                          ).animate(
+                            CurvedAnimation(
+                              parent: animation,
+                              curve: Curves.easeInOut,
+                            ),
+                          );
+
+                          final fadeAnimation = Tween<double>(
+                            begin: 0.0,
+                            end: 1.0,
+                          ).animate(
+                            CurvedAnimation(
+                              parent: animation,
+                              curve: const Interval(0.3, 1.0, curve: Curves.easeIn),
+                            ),
+                          );
+
+                          return SlideTransition(
+                            position: offsetAnimation,
+                            child: FadeTransition(
+                              opacity: fadeAnimation,
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: _QuestionRenderer(
+                          key: ValueKey('question_${state.currentQuestionIndex}'),
+                          questionType: state.currentQuestion.type,
+                        ),
                       );
                     },
                   ),
@@ -99,7 +138,10 @@ class _OnboardingFlowView extends StatelessWidget {
 class _QuestionRenderer extends StatelessWidget {
   final QuestionType questionType;
 
-  const _QuestionRenderer({required this.questionType});
+  const _QuestionRenderer({
+    Key? key,
+    required this.questionType,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
