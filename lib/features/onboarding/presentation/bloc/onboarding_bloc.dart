@@ -64,6 +64,11 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     if (state.isLastQuestion) {
       add(const SubmitOnboarding());
     } else {
+      print('=== EXPERIENCE SELECTION ===');
+      state.answers.forEach((questionId, answer) {
+        print('Question: $questionId');
+        print('Answer: ${answer.toJson()}');
+      });
       emit(state.copyWith(currentQuestionIndex: state.currentQuestionIndex + 1));
 
       if (state.currentQuestion.hasExperienceSelection && state.experiences.isEmpty) {

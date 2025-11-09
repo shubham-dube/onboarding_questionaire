@@ -36,7 +36,7 @@ class MultiMediaRenderer extends StatelessWidget {
         } else if (hasMediaUI) {
           minLines = 5;
         } else {
-          minLines = 15;
+          minLines = 12;
         }
 
         return Column(
