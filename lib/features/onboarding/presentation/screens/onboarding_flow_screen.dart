@@ -34,7 +34,6 @@ class _OnboardingFlowView extends StatelessWidget {
       body: BlocListener<OnboardingBloc, OnboardingState>(
         listener: (context, state) {
           if (state.status == OnboardingStatus.success) {
-            // Handle success
           } else if (state.status == OnboardingStatus.error) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -151,7 +150,7 @@ class _QuestionRenderer extends StatelessWidget {
       case QuestionType.multiMedia:
         return const MultiMediaRenderer();
       case QuestionType.textOnly:
-        return const MultiMediaRenderer(); // Can reuse for text-only
+        return const MultiMediaRenderer();
     }
   }
 }
