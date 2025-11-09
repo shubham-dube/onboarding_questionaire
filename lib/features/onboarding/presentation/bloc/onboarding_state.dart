@@ -19,6 +19,10 @@ class OnboardingState extends Equatable {
   final Duration audioRecordingDuration;
   final Duration videoRecordingDuration;
 
+  final List<double> audioWaveformData;
+  final PlaybackState audioPlaybackState;
+  final Duration audioPlaybackPosition;
+
   final String? errorMessage;
 
   const OnboardingState({
@@ -33,6 +37,9 @@ class OnboardingState extends Equatable {
     this.audioRecordingDuration = Duration.zero,
     this.videoRecordingDuration = Duration.zero,
     this.errorMessage,
+    this.audioWaveformData = const [],
+    this.audioPlaybackState = PlaybackState.idle,
+    this.audioPlaybackPosition = Duration.zero,
   });
 
   QuestionConfig get currentQuestion => questions[currentQuestionIndex];
@@ -58,6 +65,9 @@ class OnboardingState extends Equatable {
     Duration? audioRecordingDuration,
     Duration? videoRecordingDuration,
     String? errorMessage,
+    List<double>? audioWaveformData,
+    PlaybackState? audioPlaybackState,
+    Duration? audioPlaybackPosition,
   }) {
     return OnboardingState(
       status: status ?? this.status,
@@ -71,6 +81,9 @@ class OnboardingState extends Equatable {
       audioRecordingDuration: audioRecordingDuration ?? this.audioRecordingDuration,
       videoRecordingDuration: videoRecordingDuration ?? this.videoRecordingDuration,
       errorMessage: errorMessage,
+      audioWaveformData: audioWaveformData ?? this.audioWaveformData,
+      audioPlaybackState: audioPlaybackState ?? this.audioPlaybackState,
+      audioPlaybackPosition: audioPlaybackPosition ?? this.audioPlaybackPosition,
     );
   }
 
@@ -87,5 +100,8 @@ class OnboardingState extends Equatable {
     audioRecordingDuration,
     videoRecordingDuration,
     errorMessage,
+    audioWaveformData,
+    audioPlaybackState,
+    audioPlaybackPosition,
   ];
 }

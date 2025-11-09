@@ -70,6 +70,23 @@ class DeleteAudioRecording extends OnboardingEvent {
   const DeleteAudioRecording();
 }
 
+class PlayAudio extends OnboardingEvent {
+  const PlayAudio();
+}
+
+class PauseAudio extends OnboardingEvent {
+  const PauseAudio();
+}
+
+class SeekAudio extends OnboardingEvent {
+  final Duration position;
+
+  const SeekAudio(this.position);
+
+  @override
+  List<Object?> get props => [position];
+}
+
 // Video recording events
 class StartVideoRecording extends OnboardingEvent {
   const StartVideoRecording();
@@ -85,4 +102,49 @@ class CancelVideoRecording extends OnboardingEvent {
 
 class DeleteVideoRecording extends OnboardingEvent {
   const DeleteVideoRecording();
+}
+
+class SaveVideoRecording extends OnboardingEvent {
+  final String videoPath;
+  final Duration duration;
+
+  const SaveVideoRecording({
+    required this.videoPath,
+    required this.duration,
+  });
+
+  @override
+  List<Object?> get props => [videoPath, duration];
+}
+
+// Internal update events
+class UpdateAudioAmplitude extends OnboardingEvent {
+  final double amplitude;
+
+  const UpdateAudioAmplitude(this.amplitude);
+
+  @override
+  List<Object?> get props => [amplitude];
+}
+
+class UpdateRecordingDuration extends OnboardingEvent {
+  const UpdateRecordingDuration();
+}
+
+class UpdatePlaybackPosition extends OnboardingEvent {
+  final Duration position;
+
+  const UpdatePlaybackPosition(this.position);
+
+  @override
+  List<Object?> get props => [position];
+}
+
+class UpdatePlaybackState extends OnboardingEvent {
+  final PlaybackState playbackState;
+
+  const UpdatePlaybackState(this.playbackState);
+
+  @override
+  List<Object?> get props => [playbackState];
 }

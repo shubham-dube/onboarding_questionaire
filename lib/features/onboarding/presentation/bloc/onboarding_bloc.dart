@@ -1,18 +1,26 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:eight_club/features/onboarding/domain/repositories/onboarding_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../domain/models/answer_model.dart';
 import '../../domain/models/experience_model.dart';
 import '../../domain/models/onboarding_answer.dart';
 import '../../domain/models/question_config.dart';
-import '../../domain/models/question_model.dart';
 import 'package:equatable/equatable.dart';
+import '../../domain/services/audio_recording_service.dart';
+import '../../domain/services/audio_playback_service.dart';
+
 part 'onboarding_event.dart';
 part 'onboarding_state.dart';
 
 class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
   final OnboardingRepository _onboardingRepository;
+  final AudioRecordingService _audioRecordingService = AudioRecordingService();
+  final AudioPlaybackService _audioPlaybackService = AudioPlaybackService();
+
   Timer? _recordingTimer;
+  StreamSubscription<double>? _amplitudeSubscription;
+  StreamSubscription<PlaybackState>? _playbackStateSubscription;
+  StreamSubscription<Duration>? _positionSubscription;
 
   OnboardingBloc({required OnboardingRepository onboardingRepository})
       : _onboardingRepository = onboardingRepository,
@@ -28,16 +36,23 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     on<StopAudioRecording>(_onStopAudioRecording);
     on<CancelAudioRecording>(_onCancelAudioRecording);
     on<DeleteAudioRecording>(_onDeleteAudioRecording);
+    on<PlayAudio>(_onPlayAudio);
+    on<PauseAudio>(_onPauseAudio);
+    on<SeekAudio>(_onSeekAudio);
     on<StartVideoRecording>(_onStartVideoRecording);
     on<StopVideoRecording>(_onStopVideoRecording);
     on<CancelVideoRecording>(_onCancelVideoRecording);
     on<DeleteVideoRecording>(_onDeleteVideoRecording);
+    on<UpdateAudioAmplitude>(_onUpdateAudioAmplitude);
+    on<UpdateRecordingDuration>(_onUpdateRecordingDuration);
+    on<UpdatePlaybackPosition>(_onUpdatePlaybackPosition);
+    on<UpdatePlaybackState>(_onUpdatePlaybackState);
+    on<SaveVideoRecording>(_onSaveVideoRecording);
   }
 
   void _onLoadQuestion(LoadQuestion event, Emitter<OnboardingState> emit) {
     emit(state.copyWith(currentQuestionIndex: event.questionIndex));
 
-    // Load experiences if it's the experience selection question
     if (state.currentQuestion.hasExperienceSelection && state.experiences.isEmpty) {
       add(const LoadExperiences());
     }
@@ -51,7 +66,6 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     } else {
       emit(state.copyWith(currentQuestionIndex: state.currentQuestionIndex + 1));
 
-      // Load experiences for next question if needed
       if (state.currentQuestion.hasExperienceSelection && state.experiences.isEmpty) {
         add(const LoadExperiences());
       }
@@ -68,14 +82,12 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     emit(state.copyWith(status: OnboardingStatus.submitting));
 
     try {
-      // Log all answers
       print('=== ONBOARDING SUBMISSION ===');
       state.answers.forEach((questionId, answer) {
         print('Question: $questionId');
         print('Answer: ${answer.toJson()}');
       });
 
-      // TODO: Submit to backend API
       await Future.delayed(const Duration(seconds: 1));
 
       emit(state.copyWith(status: OnboardingStatus.success));
@@ -132,29 +144,65 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     emit(state.copyWith(answers: updatedAnswers));
   }
 
-  void _onStartAudioRecording(StartAudioRecording event, Emitter<OnboardingState> emit) {
+  Future<void> _onStartAudioRecording(StartAudioRecording event, Emitter<OnboardingState> emit) async {
+    final started = await _audioRecordingService.startRecording();
+
+    if (!started) {
+      emit(state.copyWith(
+        errorMessage: 'Failed to start recording. Please check microphone permissions.',
+      ));
+      return;
+    }
+
     emit(state.copyWith(
       audioRecordingStatus: RecordingStatus.recording,
       audioRecordingDuration: Duration.zero,
+      audioWaveformData: [],
     ));
+
+    _amplitudeSubscription?.cancel();
+    _amplitudeSubscription = _audioRecordingService.amplitudeStream.listen((amplitude) {
+      add(UpdateAudioAmplitude(amplitude));
+    });
 
     _recordingTimer?.cancel();
     _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (state.audioRecordingStatus == RecordingStatus.recording) {
-        emit(state.copyWith(
-          audioRecordingDuration: state.audioRecordingDuration + const Duration(seconds: 1),
-        ));
+        add(const UpdateRecordingDuration());
       }
     });
-
-    // TODO: Start actual audio recording
   }
 
-  void _onStopAudioRecording(StopAudioRecording event, Emitter<OnboardingState> emit) {
-    _recordingTimer?.cancel();
+  void _onUpdateAudioAmplitude(UpdateAudioAmplitude event, Emitter<OnboardingState> emit) {
+    final currentWaveform = List<double>.from(state.audioWaveformData);
+    currentWaveform.add(event.amplitude);
 
-    // TODO: Stop actual recording and get file path
-    final audioPath = 'mock/path/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
+    if (currentWaveform.length > 50) {
+      currentWaveform.removeAt(0);
+    }
+
+    emit(state.copyWith(audioWaveformData: currentWaveform));
+  }
+
+  void _onUpdateRecordingDuration(UpdateRecordingDuration event, Emitter<OnboardingState> emit) {
+    emit(state.copyWith(
+      audioRecordingDuration: state.audioRecordingDuration + const Duration(seconds: 1),
+    ));
+  }
+
+  Future<void> _onStopAudioRecording(StopAudioRecording event, Emitter<OnboardingState> emit) async {
+    _recordingTimer?.cancel();
+    await _amplitudeSubscription?.cancel();
+
+    final audioPath = await _audioRecordingService.stopRecording();
+
+    if (audioPath == null) {
+      emit(state.copyWith(
+        audioRecordingStatus: RecordingStatus.idle,
+        errorMessage: 'Failed to save recording',
+      ));
+      return;
+    }
 
     final updatedAnswer = state.currentAnswer.copyWith(
       audioPath: audioPath,
@@ -166,18 +214,54 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     emit(state.copyWith(
       audioRecordingStatus: RecordingStatus.completed,
       answers: updatedAnswers,
+      audioPlaybackState: PlaybackState.idle,
+      audioPlaybackPosition: Duration.zero,
     ));
+
+    try {
+      await _audioPlaybackService.loadAudio(audioPath);
+    } catch (e) {
+      print('Error loading audio for playback: $e');
+    }
   }
 
-  void _onCancelAudioRecording(CancelAudioRecording event, Emitter<OnboardingState> emit) {
+  Future<void> _onCancelAudioRecording(CancelAudioRecording event, Emitter<OnboardingState> emit) async {
     _recordingTimer?.cancel();
+    await _amplitudeSubscription?.cancel();
+    await _audioRecordingService.cancelRecording();
+
     emit(state.copyWith(
       audioRecordingStatus: RecordingStatus.idle,
       audioRecordingDuration: Duration.zero,
+      audioWaveformData: [],
     ));
   }
 
-  void _onDeleteAudioRecording(DeleteAudioRecording event, Emitter<OnboardingState> emit) {
+  Future<void> _onDeleteAudioRecording(DeleteAudioRecording event, Emitter<OnboardingState> emit) async {
+    await _playbackStateSubscription?.cancel();
+    _playbackStateSubscription = null;
+
+    await _positionSubscription?.cancel();
+    _positionSubscription = null;
+
+    try {
+      await _audioPlaybackService.stop();
+    } catch (e) {
+      print('Error stopping audio during delete: $e');
+    }
+
+    final audioPath = state.currentAnswer.audioPath;
+    if (audioPath != null) {
+      try {
+        final file = File(audioPath);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      } catch (e) {
+        print('Error deleting audio file: $e');
+      }
+    }
+
     final updatedAnswer = state.currentAnswer.copyWith(
       audioPath: null,
       audioDuration: null,
@@ -188,37 +272,84 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     emit(state.copyWith(
       audioRecordingStatus: RecordingStatus.idle,
       audioRecordingDuration: Duration.zero,
+      audioWaveformData: [],
+      audioPlaybackState: PlaybackState.idle,
+      audioPlaybackPosition: Duration.zero,
       answers: updatedAnswers,
     ));
   }
 
-  void _onStartVideoRecording(StartVideoRecording event, Emitter<OnboardingState> emit) {
-    emit(state.copyWith(
-      videoRecordingStatus: RecordingStatus.recording,
-      videoRecordingDuration: Duration.zero,
-    ));
+  Future<void> _onPlayAudio(PlayAudio event, Emitter<OnboardingState> emit) async {
+    try {
+      await _audioPlaybackService.play();
 
-    _recordingTimer?.cancel();
-    _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (state.videoRecordingStatus == RecordingStatus.recording) {
-        emit(state.copyWith(
-          videoRecordingDuration: state.videoRecordingDuration + const Duration(seconds: 1),
-        ));
-      }
-    });
+      _playbackStateSubscription?.cancel();
+      _playbackStateSubscription = _audioPlaybackService.playbackStateStream.listen((playbackState) {
+        add(UpdatePlaybackState(playbackState));
 
-    // TODO: Start actual video recording
+        if (playbackState == PlaybackState.completed) {
+          add(const PauseAudio());
+        }
+      });
+
+      _positionSubscription?.cancel();
+      _positionSubscription = _audioPlaybackService.positionStream.listen((position) {
+        add(UpdatePlaybackPosition(position));
+      });
+
+      emit(state.copyWith(audioPlaybackState: PlaybackState.playing));
+    } catch (e) {
+      print('Error playing audio: $e');
+      emit(state.copyWith(
+        audioPlaybackState: PlaybackState.idle,
+        errorMessage: 'Failed to play audio',
+      ));
+    }
   }
 
-  void _onStopVideoRecording(StopVideoRecording event, Emitter<OnboardingState> emit) {
-    _recordingTimer?.cancel();
+  void _onUpdatePlaybackPosition(UpdatePlaybackPosition event, Emitter<OnboardingState> emit) {
+    emit(state.copyWith(audioPlaybackPosition: event.position));
+  }
 
-    // TODO: Stop actual recording and get file path
-    final videoPath = 'mock/path/video_${DateTime.now().millisecondsSinceEpoch}.mp4';
+  void _onUpdatePlaybackState(UpdatePlaybackState event, Emitter<OnboardingState> emit) {
+    emit(state.copyWith(audioPlaybackState: event.playbackState));
+  }
 
+  Future<void> _onPauseAudio(PauseAudio event, Emitter<OnboardingState> emit) async {
+    try {
+      await _audioPlaybackService.pause();
+      await _positionSubscription?.cancel();
+      await _playbackStateSubscription?.cancel();
+
+      emit(state.copyWith(audioPlaybackState: PlaybackState.paused));
+    } catch (e) {
+      print('Error pausing audio: $e');
+    }
+  }
+
+  Future<void> _onSeekAudio(SeekAudio event, Emitter<OnboardingState> emit) async {
+    try {
+      await _audioPlaybackService.seek(event.position);
+      emit(state.copyWith(audioPlaybackPosition: event.position));
+    } catch (e) {
+      print('Error seeking audio: $e');
+    }
+  }
+
+  // Video recording - just marks intent to record
+  void _onStartVideoRecording(StartVideoRecording event, Emitter<OnboardingState> emit) {
+    // This will be handled by navigation to VideoRecordingScreen
+    // The actual recording state is managed in that screen
+    emit(state.copyWith(
+      videoRecordingStatus: RecordingStatus.idle,
+    ));
+  }
+
+  // Called after video is recorded and user returns
+  void _onSaveVideoRecording(SaveVideoRecording event, Emitter<OnboardingState> emit) {
     final updatedAnswer = state.currentAnswer.copyWith(
-      videoPath: videoPath,
-      videoDuration: state.videoRecordingDuration,
+      videoPath: event.videoPath,
+      videoDuration: event.duration,
     );
     final updatedAnswers = Map<String, OnboardingAnswer>.from(state.answers);
     updatedAnswers[state.currentQuestion.id] = updatedAnswer;
@@ -229,15 +360,29 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     ));
   }
 
+  void _onStopVideoRecording(StopVideoRecording event, Emitter<OnboardingState> emit) {
+    // No longer used - handled by VideoRecordingScreen
+  }
+
   void _onCancelVideoRecording(CancelVideoRecording event, Emitter<OnboardingState> emit) {
-    _recordingTimer?.cancel();
     emit(state.copyWith(
       videoRecordingStatus: RecordingStatus.idle,
-      videoRecordingDuration: Duration.zero,
     ));
   }
 
-  void _onDeleteVideoRecording(DeleteVideoRecording event, Emitter<OnboardingState> emit) {
+  Future<void> _onDeleteVideoRecording(DeleteVideoRecording event, Emitter<OnboardingState> emit) async {
+    final videoPath = state.currentAnswer.videoPath;
+    if (videoPath != null) {
+      try {
+        final file = File(videoPath);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      } catch (e) {
+        print('Error deleting video file: $e');
+      }
+    }
+
     final updatedAnswer = state.currentAnswer.copyWith(
       videoPath: null,
       videoDuration: null,
@@ -247,14 +392,18 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
 
     emit(state.copyWith(
       videoRecordingStatus: RecordingStatus.idle,
-      videoRecordingDuration: Duration.zero,
       answers: updatedAnswers,
     ));
   }
 
   @override
-  Future<void> close() {
+  Future<void> close() async {
     _recordingTimer?.cancel();
+    await _amplitudeSubscription?.cancel();
+    await _playbackStateSubscription?.cancel();
+    await _positionSubscription?.cancel();
+    await _audioRecordingService.dispose();
+    await _audioPlaybackService.dispose();
     return super.close();
   }
 }
