@@ -120,7 +120,6 @@ class AppTextStyles {
     color: AppColors.text1,
   );
 
-  // Material TextTheme mapping
   static TextTheme get textTheme => const TextTheme(
     displayLarge: h1Bold,
     displayMedium: h2Bold,

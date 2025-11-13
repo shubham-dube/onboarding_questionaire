@@ -20,7 +20,6 @@ class MultiMediaRenderer extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<OnboardingBloc, OnboardingState>(
       builder: (context, state) {
-        // Check keyboard visibility using MediaQuery
         final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
         final isKeyboardVisible = keyboardHeight > 0;
 
@@ -55,16 +54,15 @@ class MultiMediaRenderer extends StatelessWidget {
                             const Spacer(),
                             Padding(
                               padding: const EdgeInsets.only(
-                                left: 16,
-                                right: 16,
-                                bottom: 16,
+                                left: AppSpacing.lg,
+                                right: AppSpacing.lg,
+                                bottom: AppSpacing.lg,
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   AppSpacing.verticalSpaceLG,
 
-                                  // Question section with animations
                                   AnimatedDefaultTextStyle(
                                     duration: const Duration(milliseconds: 300),
                                     style: AppTextStyles.s1Regular.copyWith(
@@ -75,7 +73,9 @@ class MultiMediaRenderer extends StatelessWidget {
                                       state.currentQuestion.questionNumber,
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
+
+                                  AppSpacing.verticalSpaceXS,
+
                                   AnimatedDefaultTextStyle(
                                     duration: const Duration(milliseconds: 300),
                                     style: AppTextStyles.h2Bold.copyWith(
@@ -122,13 +122,12 @@ class MultiMediaRenderer extends StatelessWidget {
                                           UpdateTextAnswer(text),
                                         );
                                       },
-                                      showCharacterCount: true,
                                       minLines: minLines,
                                     ),
 
                                   // Media recording controls
                                   if (state.isRecordingAudio) ...[
-                                    const SizedBox(height: 16),
+                                    AppSpacing.verticalSpaceLG,
                                     AudioRecordingWidget(
                                       duration: state.audioRecordingDuration,
                                       waveformData: state.audioWaveformData,
@@ -147,7 +146,7 @@ class MultiMediaRenderer extends StatelessWidget {
 
                                   // Media previews
                                   if (state.hasAudioRecording && !state.isRecordingAudio) ...[
-                                    const SizedBox(height: 16),
+                                    AppSpacing.verticalSpaceLG,
                                     AudioPreviewWidget(
                                       duration: state.currentAnswer.audioDuration ?? Duration.zero,
                                       currentPosition: state.audioPlaybackPosition,
@@ -170,7 +169,7 @@ class MultiMediaRenderer extends StatelessWidget {
                                   ],
 
                                   if (state.hasVideoRecording && !state.isRecordingVideo) ...[
-                                    const SizedBox(height: 16),
+                                    AppSpacing.verticalSpaceLG,
                                     VideoPreviewWidget(
                                       videoPath: state.currentAnswer.videoPath!,
                                       duration: state.currentAnswer.videoDuration ?? Duration.zero,
@@ -219,10 +218,10 @@ class _BottomMediaControls extends StatelessWidget {
 
         return Container(
           padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            bottom: MediaQuery.of(context).padding.bottom + 16,
-            top: 16,
+            left: AppSpacing.lg,
+            right: AppSpacing.lg,
+            bottom: MediaQuery.of(context).padding.bottom + AppSpacing.lg,
+            top: AppSpacing.lg,
           ),
           decoration: BoxDecoration(
             color: AppColors.surfaceBlack1,
@@ -248,7 +247,7 @@ class _BottomMediaControls extends StatelessWidget {
                       isRecordingAudio: state.isRecordingAudio,
                       isRecordingVideo: state.isRecordingVideo,
                     ),
-                    const SizedBox(width: 12),
+                    AppSpacing.verticalSpaceMD,
                   ],
                 )
                     : const SizedBox.shrink(),

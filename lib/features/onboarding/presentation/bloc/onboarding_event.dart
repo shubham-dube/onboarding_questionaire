@@ -88,14 +88,6 @@ class SeekAudio extends OnboardingEvent {
 }
 
 // Video recording events
-class StartVideoRecording extends OnboardingEvent {
-  const StartVideoRecording();
-}
-
-class StopVideoRecording extends OnboardingEvent {
-  const StopVideoRecording();
-}
-
 class CancelVideoRecording extends OnboardingEvent {
   const CancelVideoRecording();
 }

@@ -56,7 +56,7 @@ class OnboardingAppBar extends StatelessWidget implements PreferredSizeWidget {
           // Progress indicator
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 39),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.huge),
               child: _AnimatedCurvedZigzagProgressIndicator(
                 currentStep: currentStep,
                 totalSteps: totalSteps,
@@ -157,7 +157,7 @@ class _AnimatedCurvedZigzagProgressIndicatorState
       animation: _animation,
       builder: (context, child) {
         return SizedBox(
-          height: 8,
+          height: AppSpacing.sm,
           child: CustomPaint(
             painter: _AnimatedCurvedZigzagPainter(
               progress: _animation.value,

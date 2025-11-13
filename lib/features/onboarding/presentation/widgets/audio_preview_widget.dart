@@ -1,3 +1,4 @@
+import 'package:eight_club/core/theme/app_spacing.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_borders.dart';
@@ -15,7 +16,7 @@ class AudioPreviewWidget extends StatelessWidget {
   final VoidCallback onDelete;
 
   const AudioPreviewWidget({
-    Key? key,
+    super.key,
     required this.duration,
     required this.currentPosition,
     required this.playbackState,
@@ -23,7 +24,7 @@ class AudioPreviewWidget extends StatelessWidget {
     required this.onPause,
     required this.onSeek,
     required this.onDelete,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +33,7 @@ class AudioPreviewWidget extends StatelessWidget {
     final isCompleted = playbackState == PlaybackState.completed;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppColors.surfaceWhite2,
         borderRadius: AppBorders.borderRadiusMD,
@@ -74,7 +75,7 @@ class AudioPreviewWidget extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(width: 12),
+              AppSpacing.horizontalSpaceLG,
 
               // Title and duration
               Expanded(
@@ -93,14 +94,14 @@ class AudioPreviewWidget extends StatelessWidget {
 
               // Delete button
               IconButton(
-                onPressed: onDelete,
+                onPressed: ()=> _showDeleteConfirmation(context),
                 icon: Icon(Icons.delete_outline, color: AppColors.negative),
                 iconSize: 24,
               ),
             ],
           ),
 
-          const SizedBox(height: 12),
+          AppSpacing.verticalSpaceMD,
 
           // Progress bar
           _AudioProgressBar(
@@ -108,6 +109,53 @@ class AudioPreviewWidget extends StatelessWidget {
             position: currentPosition,
             onSeek: onSeek,
             isEnabled: !isLoading,
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.base2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Text(
+          'Delete Audio?',
+          style: AppTextStyles.h3Bold.copyWith(
+            color: AppColors.text1,
+          ),
+        ),
+        content: Text(
+          'Are you sure you want to delete this audio recording?',
+          style: AppTextStyles.b1Regular.copyWith(
+            color: AppColors.text3,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: AppTextStyles.b1Bold.copyWith(
+                color: AppColors.text3,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              onDelete();
+            },
+            child: Text(
+              'Delete',
+              style: AppTextStyles.b1Bold.copyWith(
+                color: AppColors.negative,
+              ),
+            ),
           ),
         ],
       ),

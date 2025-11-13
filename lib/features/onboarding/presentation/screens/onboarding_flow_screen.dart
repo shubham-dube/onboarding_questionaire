@@ -2,7 +2,6 @@ import 'package:eight_club/features/onboarding/domain/repositories/onboarding_re
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../domain/models/question_config.dart';
 import '../bloc/onboarding_bloc.dart';
@@ -70,16 +69,13 @@ class _OnboardingFlowView extends StatelessWidget {
                       totalSteps: state.questions.length,
                       onBack: state.isFirstQuestion
                           ? () => Navigator.of(context).pop()
-                          : () => context
-                          .read<OnboardingBloc>()
-                          .add(const PreviousQuestion()),
-                      onClose: () =>
-                          Navigator.of(context).popUntil((route) => route.isFirst),
+                          : () => context.read<OnboardingBloc>().add(const PreviousQuestion()),
+                      onClose: () => Navigator.of(context).popUntil((route) => route.isFirst),
                     );
                   },
                 ),
 
-                // Question content with animated transitions
+                // Question content
                 Expanded(
                   child: BlocBuilder<OnboardingBloc, OnboardingState>(
                     builder: (context, state) {
@@ -138,9 +134,9 @@ class _QuestionRenderer extends StatelessWidget {
   final QuestionType questionType;
 
   const _QuestionRenderer({
-    Key? key,
+    super.key,
     required this.questionType,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

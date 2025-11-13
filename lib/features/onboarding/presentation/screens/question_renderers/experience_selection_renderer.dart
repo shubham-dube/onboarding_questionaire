@@ -38,18 +38,15 @@ class _ExperienceSelectionRendererState
 
   @override
   Widget build(BuildContext context) {
-    // Check keyboard visibility using MediaQuery
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
     final isKeyboardVisible = keyboardHeight > 0;
 
     return BlocBuilder<OnboardingBloc, OnboardingState>(
       builder: (context, state) {
-        // Calculate minLines based on keyboard state
         final minLines = isKeyboardVisible ? 3 : 4;
 
         return Column(
           children: [
-            // Scrollable content area
             Expanded(
               child: LayoutBuilder(
                 builder: (context, constraints) {
@@ -61,17 +58,15 @@ class _ExperienceSelectionRendererState
                       child: IntrinsicHeight(
                         child: Column(
                           children: [
-                            // This spacer will push content to bottom
                             const Spacer(),
 
-                            // Actual content
+                            // content
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  // Question number with animation
                                   AnimatedDefaultTextStyle(
                                     duration: const Duration(milliseconds: 300),
                                     style: AppTextStyles.s1Regular.copyWith(
@@ -84,7 +79,6 @@ class _ExperienceSelectionRendererState
                                   ),
                                   const SizedBox(height: 4),
 
-                                  // Question text with animation
                                   AnimatedDefaultTextStyle(
                                     duration: const Duration(milliseconds: 300),
                                     style: AppTextStyles.h2Bold.copyWith(
@@ -97,7 +91,6 @@ class _ExperienceSelectionRendererState
 
                                   AppSpacing.verticalSpaceLG,
 
-                                  // Experience horizontal scroll with fixed height
                                   SizedBox(
                                     height: 96,
                                     child: AnimatedSwitcher(
@@ -136,7 +129,7 @@ class _ExperienceSelectionRendererState
                                           return Padding(
                                             padding: EdgeInsets.only(
                                               right: index < state.experiences.length - 1
-                                                  ? 12
+                                                  ? AppSpacing.md
                                                   : 0,
                                             ),
                                             child: ExperienceCard(
@@ -148,7 +141,8 @@ class _ExperienceSelectionRendererState
                                                   ToggleExperienceSelection(
                                                       experience.id),
                                                 );
-                                                // Animate to first position after selection
+
+                                                // Animation to first after selection
                                                 if (!isSelected) {
                                                   Future.delayed(
                                                     const Duration(milliseconds: 100),
@@ -177,7 +171,6 @@ class _ExperienceSelectionRendererState
                                           .read<OnboardingBloc>()
                                           .add(UpdateTextAnswer(text));
                                     },
-                                    showCharacterCount: true,
                                     minLines: minLines,
                                   ),
                                 ],
@@ -192,7 +185,7 @@ class _ExperienceSelectionRendererState
               ),
             ),
 
-            // Bottom section with Next button
+            // Next Button
             Container(
               padding: EdgeInsets.only(
                 left: 16,

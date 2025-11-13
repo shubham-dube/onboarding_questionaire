@@ -39,8 +39,6 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     on<PlayAudio>(_onPlayAudio);
     on<PauseAudio>(_onPauseAudio);
     on<SeekAudio>(_onSeekAudio);
-    on<StartVideoRecording>(_onStartVideoRecording);
-    on<StopVideoRecording>(_onStopVideoRecording);
     on<CancelVideoRecording>(_onCancelVideoRecording);
     on<DeleteVideoRecording>(_onDeleteVideoRecording);
     on<UpdateAudioAmplitude>(_onUpdateAudioAmplitude);
@@ -341,16 +339,6 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     }
   }
 
-  // Video recording - just marks intent to record
-  void _onStartVideoRecording(StartVideoRecording event, Emitter<OnboardingState> emit) {
-    // This will be handled by navigation to VideoRecordingScreen
-    // The actual recording state is managed in that screen
-    emit(state.copyWith(
-      videoRecordingStatus: RecordingStatus.idle,
-    ));
-  }
-
-  // Called after video is recorded and user returns
   void _onSaveVideoRecording(SaveVideoRecording event, Emitter<OnboardingState> emit) {
     final updatedAnswer = state.currentAnswer.copyWith(
       videoPath: event.videoPath,
@@ -365,9 +353,7 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     ));
   }
 
-  void _onStopVideoRecording(StopVideoRecording event, Emitter<OnboardingState> emit) {
-    // No longer used - handled by VideoRecordingScreen
-  }
+
 
   void _onCancelVideoRecording(CancelVideoRecording event, Emitter<OnboardingState> emit) {
     emit(state.copyWith(

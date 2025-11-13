@@ -5,7 +5,6 @@ import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
-import '../../../../core/theme/app_borders.dart';
 import '../../domain/services/full_screen_video_player.dart';
 
 class VideoPreviewWidget extends StatefulWidget {

@@ -11,12 +11,12 @@ class ExperienceCard extends StatefulWidget {
   final int index;
 
   const ExperienceCard({
-    Key? key,
+    super.key,
     required this.experience,
     required this.isSelected,
     required this.onTap,
     this.index = 0,
-  }) : super(key: key);
+  });
 
   @override
   State<ExperienceCard> createState() => _ExperienceCardState();
@@ -26,7 +26,6 @@ class _ExperienceCardState extends State<ExperienceCard>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
-  late Animation<double> _elevationAnimation;
 
   @override
   void initState() {
@@ -46,15 +45,6 @@ class _ExperienceCardState extends State<ExperienceCard>
       ),
     );
 
-    _elevationAnimation = Tween<double>(
-      begin: 0.0,
-      end: 8.0,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeInOut,
-      ),
-    );
   }
 
   @override

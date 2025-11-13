@@ -30,8 +30,8 @@ class OnboardingAnswer {
       questionId: questionId ?? this.questionId,
       textAnswer: textAnswer ?? this.textAnswer,
       selectedExperienceIds: selectedExperienceIds ?? this.selectedExperienceIds,
-      audioPath: audioPath ?? this.audioPath,
-      videoPath: videoPath ?? this.videoPath,
+      audioPath: audioPath ,
+      videoPath: videoPath ,
       audioDuration: audioDuration ?? this.audioDuration,
       videoDuration: videoDuration ?? this.videoDuration,
     );

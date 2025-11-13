@@ -58,9 +58,7 @@ class _ImprovedTextFieldState extends State<ImprovedTextField> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        // This allows tapping inside the TextField to work normally
-      },
+      onTap: () {},
       child: TextField(
         controller: _controller,
         focusNode: _focusNode,
